@@ -86,15 +86,17 @@ class StopOptionsLister:
         travel_time = 0
         last_section_id = None
         terminal_station = None
+        previous_start_time = start_time
         for section_id, section in enumerate(route["sections"]):
             if section["type"] == "move":
-                to_time = str_to_datetime(section["to_time"])
-                duration = (to_time - start_time).total_seconds() // 60
+                section_to_time = str_to_datetime(section["to_time"])
+                duration = (section_to_time - previous_start_time).total_seconds() // 60
                 travel_time += duration
+                previous_start_time = section_to_time
 
                 if (
                     travel_time > self.max_travel_time
-                    or to_time.hour > self.latest_stop_time
+                    or section_to_time.hour > self.latest_stop_time
                 ):
                     stop_options.append(
                         {
@@ -111,6 +113,8 @@ class StopOptionsLister:
             return [], terminal_station
 
         for station in route["sections"][last_section_id]["transport"]["calling_at"]:
+            if "to_time" not in station:
+                continue
             to_time = str_to_datetime(station["to_time"])
             terminal_to_time = str_to_datetime(
                 route["sections"][last_section_id]["to_time"]

@@ -12,14 +12,28 @@ def str_to_datetime(str):
 
 
 class StopOptionsLister:
-    def __init__(self, start, goal, start_time):
-        self.start_station = start
-        self.goal_station = goal
+    def __init__(
+        self, start, goal, start_time, max_travel_time=60 * 6, latest_stop_time=19
+    ):
+        # convert station name to id
+        url = "https://navitime-transport.p.rapidapi.com/transport_node"
+        querystring = {"word": start}
+        headers = {
+            "X-RapidAPI-Key": "4d46e4ed49msha7517f29d7a002cp197a84jsnb631db197b9a",
+            "X-RapidAPI-Host": "navitime-transport.p.rapidapi.com",
+        }
+        response = requests.get(url, headers=headers, params=querystring)
+        self.start_station = response.json()["items"][0]["id"]
+
+        querystring["word"] = goal
+        response = requests.get(url, headers=headers, params=querystring)
+        self.goal_station = response.json()["items"][0]["id"]
+
         self.trip_start_time = start_time
-        self.max_travel_time = 60 * 6  # 6 hours
-        self.latest_stop_time = 19  # must stop before 6pm
+        self.max_travel_time = max_travel_time  # max travel time in minutes
+        self.latest_stop_time = latest_stop_time  # must stop before latest_stop_time
         self.stop_options_lists = []
-        
+
     def get_stop_options_lists(self):
         return self.stop_options_lists
 
@@ -60,6 +74,8 @@ class StopOptionsLister:
             start_time = start_time + datetime.timedelta(days=1)
             start_time.replace(hour=9, minute=0, second=0)
 
+        return self.stop_options_lists
+
     # returns a list of stations options to stop at.
     # returns empty list if you don't need to stop
     def next_stop_stations(self, start, goal, start_time):
@@ -82,6 +98,7 @@ class StopOptionsLister:
                 ):
                     stop_options.append(
                         {
+                            "name": route["sections"][section_id - 1]["name"],
                             "node_id": route["sections"][section_id - 1]["node_id"],
                             "coord": route["sections"][section_id - 1]["coord"],
                         }
@@ -98,18 +115,25 @@ class StopOptionsLister:
             terminal_to_time = str_to_datetime(
                 route["sections"][last_section_id]["to_time"]
             )
-            # if the previous stop is within 15 minutes, add it to the list
-            if (terminal_to_time - to_time).total_seconds() < 15 * 60:
+            # if the previous stop is within 30 minutes, add it to the list
+            if (terminal_to_time - to_time).total_seconds() < 30 * 60:
                 stop_options.append(
-                    {"node_id": station["node_id"], "coord": station["coord"]}
+                    {
+                        "name": station["name"],
+                        "node_id": station["node_id"],
+                        "coord": station["coord"],
+                    }
                 )
 
         return stop_options, terminal_station
 
+
 def main():
-    lister = StopOptionsLister("00001756", "00007420", datetime.datetime(2020, 1, 1, 9, 0, 0))
-    lister.list_stop_stations()
-    print(lister.get_stop_options_lists())
+    lister = StopOptionsLister(
+        "京都", "博多", datetime.datetime(2020, 1, 1, 9, 0, 0)
+    )
+    print(len(lister.list_stop_stations()))
+
 
 if __name__ == "__main__":
     main()

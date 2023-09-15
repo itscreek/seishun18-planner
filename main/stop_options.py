@@ -119,8 +119,8 @@ class StopOptionsLister:
             terminal_to_time = str_to_datetime(
                 route["sections"][last_section_id]["to_time"]
             )
-            # if the previous stop is within 30 minutes, add it to the list
-            if (terminal_to_time - to_time).total_seconds() < 30 * 60:
+            # if the previous stop is within 40 minutes, add it to the list
+            if (terminal_to_time - to_time).total_seconds() < 40 * 60:
                 stop_options.append(
                     {
                         "name": station["name"],

@@ -59,24 +59,24 @@ class TripPlanner:
             sorted_hotels_with_scores_df = pd.concat([sorted_hotels_with_scores_df, df])
 
         station_score = sorted_hotels_with_scores_df["score"].head(5).mean()
-        return station_score, sorted_hotels_with_scores_df.head(5)
+        return station_score, sorted_hotels_with_scores_df["hotelcode"].head(5).tolist()
 
     # returns a tuple of best station name and top 5 hotels near the station
     def get_best_station(self, stations_names, latitudes, longitudes):
         best_score = 0
         best_station_name = None
-        best_hotels_df = None
+        best_hotels = None
         for station_name, latitude, longitude in zip(
             stations_names, latitudes, longitudes
         ):
-            station_score, hotels_df = self.get_station_score(
+            station_score, hotels = self.get_station_score(
                 station_name, latitude, longitude
             )
             if station_score > best_score:
                 best_score = station_score
                 best_station_name = station_name
-                best_hotels_df = hotels_df
-        return best_station_name, best_hotels_df
+                best_hotels = hotels
+        return best_station_name, best_hotels
 
     # return a list of stops
     # each stop is a tuple of station name and top 5 hotels near the station
@@ -98,9 +98,29 @@ class TripPlanner:
 
 
 def test():
+    start = input("出発地: ")
+    goal = input("目的地: ")
+    start_time = input("出発時刻(YYYY/MM/DD HH:MM): ")
+    start_time = datetime.datetime.strptime(start_time, "%Y/%m/%d %H:%M")
     planner = TripPlanner()
-    print(planner.plan_trip("京都", "博多", datetime.datetime(2020, 1, 1, 9, 0, 0)))
-
+    suggests = planner.plan_trip(start, goal, start_time)
+  
+    hotel_df = pd.read_csv("data/hotels/KNT_hotels.csv")
+    # prints suggested stops
+    for i, suggest in enumerate(suggests):
+        print("{}泊目".format(i + 1))
+        print(" 駅名: {}".format(suggest[0]))
+        print(" ホテル")
+        for hotelcode in suggest[1]:
+            if hotelcode == "none":
+                continue
+            print(
+                "  {}".format(
+                    hotel_df[hotel_df["hotelcode"] == hotelcode]["name"].values[0]
+                )
+            )
+           
+        print("*************************************")
 
 if __name__ == "__main__":
     test()
